@@ -2,7 +2,8 @@
 public class Inode {
     private final static int iNodeSize = 32;       // fix to 32 bytes
     private final static int directSize = 11;      // # direct pointers
-
+    private final static int size = 16;
+    
     public int length;                             // file size in bytes
     public short count;                            // # file-table entries pointing to this
     public short flag;                             // 0 = unused, 1 = used, ...
@@ -18,8 +19,27 @@ public class Inode {
         indirect = -1;
     }
 
-    Inode( short iNumber ) {                       // retrieving inode from disk
+    Inode( short iNumber )
+    {   // retrieving inode from disk
         // design it by yourself.
+        int blockNum = 1 + iNumber / size;
+
+        byte[] iData = new byte[Disk.blockSize];
+        SysLib.rawread(blockNum, iData);
+        int offset = (iNumber % 16) * iNodeSize; //Calculate offset
+        length = SysLib.bytes2int(iData,offset);
+        offset += 4;
+        count = SysLib.bytes2short(iData,offset);
+        offset += 2;
+        flag = SysLib.bytes2short(iData,offset);
+        offset += 2;
+
+        for(int i = 0; i <directSize; i++)
+        {
+            direct[i] = SysLib.bytes2short(iData, offset);
+            offset += 2;
+        }
+        indirect = SysLib.bytes2short(iData,offset);
     }
 
     int toDisk( short iNumber ) {                  // save to disk as the i-th inode
