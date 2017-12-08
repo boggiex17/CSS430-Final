@@ -126,4 +126,15 @@ public class Inode {
             return true;
         }
     }
+    byte [] unregisterIndexBlock()
+    {
+        if(indirect >= 0)
+        {
+            byte [] blockData = new byte[Disk.blockSize];
+            SysLib.rawread(indirect,blockData);
+            indirect = -1;
+            return blockData;
+        }
+        return null;
+    }
 }
