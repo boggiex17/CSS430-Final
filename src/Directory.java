@@ -59,10 +59,9 @@ public class Directory {
                 else
                 {
                     fsize[i] = filename.length(); //filename size is <= maxChars
-                }
-                inodeNum = i;
+                }                
                 filename.getChars(0, fsize[i], fnames[i],0); //Copy characters into fnames
-                break; //break out of for loop and return index
+                return i; //Return free slot
             }
         }
         return inodeNum;
