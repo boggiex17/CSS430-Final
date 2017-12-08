@@ -47,7 +47,6 @@ public class Directory {
     public short ialloc( String filename ) {
         // filename is the one of a file to be created.
         // allocates a new inode number for this filename
-        short inodeNum = -1; //Default to -1 in case no free slot is found
         for(short i = 0; i < fsize.length; i++) //Loop through fsize until free slot is found
         {
             if(fsize[i] == 0) //Free slot
@@ -64,7 +63,7 @@ public class Directory {
                 return i; //Return free slot
             }
         }
-        return inodeNum;
+        return -1;
     }
 
     // deallocates this inumber (inoe number)
