@@ -69,4 +69,41 @@ public class Inode {
         SysLib.rawwrite(blockNum, blockData); //Write to disk
         return 0; 
     }
+    int getBlock(int index, short offset)
+    {
+        int block = index / Disk.blockSize; //Divide by 512 to find entry
+        if(block < directSize) //Block is direct
+        {
+            if(direct[block] >= 0) //Block already exists
+            {
+                return -1;
+            }
+            if(direct[block -1 ] == -1 && block > 0)
+            {
+                return -2;
+            }
+            direct[block] = offset;
+            return 0;
+        }
+        else //Indirect block
+        {
+            if(indirect < 0) //No indirect block allocated
+            {
+                return -3;
+            }
+            byte [] blockData = new byte[Disk.blockSize];
+            SysLib.rawread(indirect,blockData);
+            short indiBlock = SysLib.bytes2short(blockData,(block - directSize )* 2);
+            if(indiBlock > 0)
+            {
+                return -1;
+            }
+            else
+            {
+                SysLib.short2bytes(offset,blockData, (block - directSize )* 2);
+                SysLib.rawwrite(indirect, blockData);
+            }
+        }
+        return 0;
+    }
 }
