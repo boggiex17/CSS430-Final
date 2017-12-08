@@ -126,15 +126,15 @@ public class Inode {
             return true;
         }
     }
-    byte [] unregisterIndexBlock()
+    byte[] releaseBlock()
     {
-        if(indirect >= 0)
+        if (indirect >= 0)  //Indirect block points to something
         {
-            byte [] blockData = new byte[Disk.blockSize];
-            SysLib.rawread(indirect,blockData);
-            indirect = -1;
+            byte[] blockData = new byte[Disk.blockSize]; //512 bytes
+            SysLib.rawread(indirect, blockData);
+            indirect = -1; //Indirect block doesn't point to anything anymore
             return blockData;
         }
-        return null;
+        return null; //Indirect block did not point to anything
     }
 }
