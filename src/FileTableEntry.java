@@ -1,5 +1,7 @@
+// Completed =========================================================================
 
-public class FileTableEntry {          // Each table entry should have
+
+public class FileTableEntry {           // Each table entry should have
     public int seekPtr;                 //    a file seek pointer
     public final Inode inode;           //    a reference to its inode
     public final short iNumber;         //    this inode number
