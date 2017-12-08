@@ -111,7 +111,8 @@ public class Inode {
         return 0;
     }
     
-    // 
+    // finds the block that the seek pointer is pointing too
+    // takes in a pointer and return the index of the block
     int findBlock(int index) {
         int block = index/Disk.blockSize;
 
@@ -131,23 +132,28 @@ public class Inode {
         return SysLib.bytes2short(readData, offset);// return short
     }
     
+    // writes a block back to the disk
+    // takes in a block number that needs to be writen to disk
+    // return true or false based on succession 
     boolean setBlock(short blockNumber) {
-        for(int i = 0; i < directSize; i++) {
-            if (direct[i] == -1)
-                return false;
+        for(int i = 0; i < directSize; i++) {       // loop indirect
+            if (direct[i] == -1)                    // if block is invalid
+                return false;                       // can't update
         }
 
-        if (indirect != -1)
+        if (indirect != -1)                         // no need to write back
             return false;
         else {
-            indirect = blockNumber;
-            byte[] loadData = new byte[Disk.blockSize];
+            indirect = blockNumber;                 // set indirect
+            byte[] loadData = new byte[Disk.blockSize]; // temporary 
 
+            // fill with default data 
             for(int i = 0; i < (Disk.blockSize/2); i++) {
                 SysLib.short2bytes((short)-1, loadData, i*2);
             }
+            // write to disl
             SysLib.rawwrite(blockNumber, loadData);
-            return true;
+            return true;                            // success
         }
     }
     byte[] releaseBlock()
