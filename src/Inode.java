@@ -106,4 +106,24 @@ public class Inode {
         }
         return 0;
     }
+    
+    boolean setBlock(short blockNumber) {
+        for(int i = 0; i < directSize; i++) {
+            if (direct[i] == -1)
+                return false;
+        }
+
+        if (indirect != -1)
+            return false;
+        else {
+            indirect = blockNumber;
+            byte[] loadData = new byte[Disk.blockSize];
+
+            for(int i = 0; i < (Disk.blockSize/2); i++) {
+                SysLib.short2bytes((short)-1, loadData, i*2);
+            }
+            SysLib.rawwrite(blockNumber, loadData);
+            return true;
+        }
+    }
 }
