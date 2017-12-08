@@ -38,10 +38,29 @@ public class Directory {
     }
 
     public byte[] directory2bytes( ) {
+
         // converts and return Directory information into a plain byte array
         // this byte array will be written back to disk
         // note: only meaningfull directory information should be converted
         // into bytes.
+        int intSize = fsize.length * 4; //Fsize is an int array, with .length entries, 4 bytes each
+        int charSize = fsize.length * 2 * maxChars; //Up to 30 characters per entry, .length entries, 2 bytes each
+        byte [] toByte = new byte[intSize + charSize ]; //Initialize with proper size
+        int offset = 0;
+
+        for(int i = 0; i < fsize.length; i++)
+        {
+            SysLib.int2bytes(fsize[i],toByte,offset); //SysLib int2bytes does calculation for us
+            offset += 4; //4 byte offset because of int size
+        }
+        for(int i = 0; i < fnames.length; i++)
+        {
+            String entryName = new String(fnames[i],0,fsize[i]);
+            byte [] stSize = entryName.getBytes(); //Returns the sequence of bytes representing this file name
+            System.arraycopy(stSize,0, toByte, offset, stSize.length);
+            offset += maxChars * 2; //Offset is the maximum number of characters * 2 bytes per character
+        }
+        return toByte;
     }
 
     public short ialloc( String filename ) {
