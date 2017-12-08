@@ -68,12 +68,24 @@ public class Directory {
         return inodeNum;
     }
 
+    // deallocates this inumber (inoe number)
+    // deletes the corresponding file
     public boolean ifree( short iNumber ) {
-        // deallocates this inumber (inode number)
-        // the corresponding file will be deleted.
+       if(fsize[iNumber] > 0 && iNumber > 0) {      // if valid
+           fsize[iNumber] = 0;                      // set to be deleted
+           return true;
+       }
+       else
+           return false;
     }
 
+    // returns the inumber corresponding to this filename
     public short namei( String filename ) {
-        // returns the inumber corresponding to this filename
+        char[] temp = filename.toCharArray();       // convert to char array
+        for(short i = 0; i < fnames.length; i++) {  // loop names
+            if(Arrays.equals(temp, fnames[i]))      // if match
+                return i;
+        }
+        return -1;
     }
 }
