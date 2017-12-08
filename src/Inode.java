@@ -46,29 +46,33 @@ public class Inode {
         // save to disk as the i-th inode
         // design it by yourself.
         int offset = 0;
-        int blockOffSet = (iNumber % 16) *iNodeSize; //Location of inode in block
-        int blockNum = 1 + iNumber / 16; //Location of block on disk
-        byte[] nodeData = new byte[iNodeSize]; //32 Bytes in an inode, 16 inodes per block
-        byte[] blockData = new byte[Disk.blockSize]; //For reading from disk
+        int inodeOffset = (iNumber % 16) * iNodeSize; // Location of inode in block
+        int blockOffset = 1 + iNumber / 16;           // Location of block on disk
+        byte[] inodeData = new byte[iNodeSize];       // 32 Bytes in an inode, 16 inodes per block
+        byte[] blockData = new byte[Disk.blockSize];  // For reading from disk
 
-        SysLib.int2bytes(length, nodeData, offset); //Store length
-        offset += 4; //4 bytes per int
-        SysLib.short2bytes(count, nodeData, offset); //Store count
-        offset += 2; //2 bytes for short
-        SysLib.short2bytes(flag, nodeData, offset); //Store flag
-        offset += 2; //2 bytes for short
+        SysLib.int2bytes(length, inodeData, offset);  // Store length
+        offset += 4; // 4 bytes for int
+        SysLib.short2bytes(count, inodeData, offset); // Store count
+        offset += 2; // 2 bytes for short
+        SysLib.short2bytes(flag, inodeData, offset);   // Store flag
+        offset += 2; // 2 bytes for short
 
-        for(int i = 0; i < directSize; i++)  //Start writing direct pointers
+        for(int i = 0; i < directSize; i++)  // Start writing direct pointers
         {
-            SysLib.short2bytes(direct[i],nodeData, offset); //Convert short entries to bytes, store with offset
-            offset += 2; //Each short entry is 2 bytes
+            // Convert short entries to bytes, store with offset
+            SysLib.short2bytes(direct[i], inodeData, offset);
+            offset += 2; // Each short entry is 2 bytes
         }
-        SysLib.short2bytes(indirect, nodeData, offset); //Write indirect block
-        SysLib.rawread(blockNum,blockData); //Read old data from disk
-        System.arraycopy(nodeData, 0, blockData, blockOffSet, iNodeSize);
-        SysLib.rawwrite(blockNum, blockData); //Write to disk
-        return 0; 
+        SysLib.short2bytes(indirect, inodeData, offset); // Write indirect block
+        // Read whole block so you only rewrite 1 inode (32 bytes) of data instead
+        // of overwriting whole block (512 bytes of data)
+        SysLib.rawread(blockOffset, blockData);          // Read old data from disk
+        System.arraycopy(inodeData, 0, blockData, inodeOffset, iNodeSize);
+        SysLib.rawwrite(blockOffset, blockData);         // Write to disk
+        return 0;
     }
+    
     int getBlock(int index, short offset)
     {
         int block = index / Disk.blockSize; //Divide by 512 to find entry
@@ -105,6 +109,26 @@ public class Inode {
             }
         }
         return 0;
+    }
+    
+    // 
+    int findBlock(int index) {
+        int block = index/Disk.blockSize;
+
+        if(block < directSize) {        // in direct block of inode
+            return direct[block];
+        }
+        else if(indirect == -1) {       // indirect no pointer
+            return -1;
+        }
+
+        // not in direct or inderect
+        byte[] readData = new byte[Disk.blockSize]; // to read
+        SysLib.rawread(indirect, readData);         // read
+
+        // find offset (*2 is because pointers are short (2 bytes))
+        int offset = (block - directSize) * 2;      // find offset
+        return SysLib.bytes2short(readData, offset);// return short
     }
     
     boolean setBlock(short blockNumber) {
