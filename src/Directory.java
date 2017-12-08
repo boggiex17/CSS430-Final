@@ -52,6 +52,25 @@ public class Directory {
     public boolean ifree( short iNumber ) {
         // deallocates this inumber (inode number)
         // the corresponding file will be deleted.
+        short inodeNum = -1; //Default to -1 in case no free slot is found
+        for(short i = 0; i < fsize.length; i++) //Loop through fsize until free slot is found
+        {
+            if(fsize[i] == 0) //Free slot
+            {
+                if(filename.length() > maxChars) //Filename is bigger than maxChars (30)
+                {
+                    fsize[i] = maxChars; //Copy 30 characters of filename
+                }
+                else
+                {
+                    fsize[i] = filename.length(); //filename size is <= maxChars
+                }
+                inodeNum = i;
+                filename.getChars(0, fsize[i], fnames[i],0); //Copy characters into fnames
+                break; //break out of for loop and return index
+            }
+        }
+        return inodeNum;
     }
 
     public short namei( String filename ) {
