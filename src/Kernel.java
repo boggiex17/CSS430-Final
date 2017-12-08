@@ -215,18 +215,51 @@ switch( irq ) {
             case CFLUSH:  // to be implemented in assignment 4
                 cache.flush( );
                 return OK;
-            case OPEN:    // to be implemented in project
-                return OK;
-            case CLOSE:   // to be implemented in project
-                return OK;
-            case SIZE:    // to be implemented in project
-                return OK;
-            case SEEK:    // to be implemented in project
-                return OK;
-            case FORMAT:  // to be implemented in project
-                return OK;
-            case DELETE:  // to be implemented in project
-                return OK;
+
+            //
+            case OPEN:
+                if ((myTcb = scheduler.getMyTcb()) != null) {   // thread exists
+                    String[] s = (String[]) args;               // get filename and mode
+                    return myTcb.getFd(fs.open(s[0], s[1]));    // return file table entry
+                }
+                else
+                    return ERROR;
+
+            case CLOSE:
+                if ((myTcb = scheduler.getMyTcb()) != null) {   // thread exists
+                    FileTableEntry ftEnt = myTcb.getFtEnt(param);   // get entry
+                    if (ftEnt == null || fs.close(ftEnt) == false)  // entry not null or closed
+                        return ERROR;
+                    if (myTcb.returnFd(param) != ftEnt)         // entry doesn't exist
+                        return ERROR;
+                    return OK;
+                }
+                return ERROR;
+
+            case SIZE:
+                if ((myTcb = scheduler.getMyTcb()) != null) {   // thread exists
+                    FileTableEntry ftEnt = myTcb.getFtEnt(param);   // get entry
+                    if (ftEnt != null)                          // entry exists
+                        return fs.fsize(ftEnt);                 // return entry size
+                }
+                return ERROR;
+
+            case SEEK:
+                if ((myTcb = scheduler.getMyTcb()) != null) {   // thread exists
+                    int[] seekArgs = (int[]) args;              // get arguments
+                    FileTableEntry ftEnt = myTcb.getFtEnt(param); // get entry
+                    if (ftEnt != null)                          // entry exists
+                        return fs.seek(ftEnt, seekArgs[0], seekArgs[1]);    // update seek pointer
+                }
+                return ERROR;
+
+            case FORMAT:
+                // if successful format return OK else ERROR
+                return (fs.format(param) == true) ? OK : ERROR;
+
+            case DELETE:
+                // if successful delete return OK else ERROR
+                return (fs.delete((String)args) == true) ? OK : ERROR;
         }
         return ERROR;
     case INTERRUPT_DISK: // Disk interrupts
