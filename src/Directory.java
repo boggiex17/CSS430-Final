@@ -73,6 +73,8 @@ public class Directory {
     public boolean ifree( short iNumber ) {
        if(fsize[iNumber] > 0 && iNumber > 0) {      // if valid
            fsize[iNumber] = 0;                      // set to be deleted
+           for(int i = 0; i < maxChars; i++)        // loop name
+               fnames[iNumber][i] = 0;              // reset name
            return true;
        }
        else
