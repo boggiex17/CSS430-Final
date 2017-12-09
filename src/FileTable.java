@@ -42,12 +42,28 @@ public class FileTable {
         FileTableEntry test = new FileTableEntry();
         return  test;
     }
-
+    // Recieve a file table entry reference as a parameter and
+    // free this file table entry. Save corresponding inode to the
+    // disk. Return true if file table entry was in table
     public synchronized boolean ffree( FileTableEntry e ) {
-        // receive a file table entry reference
-        // save the corresponding inode to the disk
-        // free this file table entry.
-        // return true if this file table entry found in my table
+       if(!table.contains(e))
+           return false;
+       else {
+           Inode temp = e.inode;
+           temp.count--;
+
+           if (temp.flag == 1)
+               e.inode.flag = 0;
+           else if (temp.flag == 2)
+               e.inode.flag = 0;
+           else if (temp.flag == 3)
+               e.inode.flag = 3;
+           else if (temp.flag == 4)
+               e.inode.flag = 3;
+
+           temp.toDisk(e.iNumber);      // write to disk
+           return true;
+       }
     }
 
     public synchronized boolean fempty( ) {
