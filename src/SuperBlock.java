@@ -28,7 +28,7 @@ public class SuperBlock {
     public void format(int blocksNumber) {
 
     }
-
+    //Sync updates the disk with any changes made to superblock
     public void sync()
     {
         byte[] data = new byte[Disk.blockSize]; //512 bytes per block
