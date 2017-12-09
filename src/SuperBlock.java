@@ -5,15 +5,16 @@ public class SuperBlock {
     public int totalInodes; // the number of inodes
     public int freeList;    // the block number of the free list's head
 
+    // super block constructor
     public SuperBlock( int diskSize ) {
         // read superblock from disk
         byte[] superBlock = new byte[Disk.blockSize];
         SysLib.rawread(0, superBlock);
-        totalBlocks = SysLib.bytes2int(superBlock,0);
-        totalInodes = SysLib.bytes2int(superBlock,4);
-        freeList = SysLib.bytes2int(superBlock, 8);
+        totalBlocks = SysLib.bytes2int(superBlock,0);   // retrieve totalBlocks from block
+        totalInodes = SysLib.bytes2int(superBlock,4);   // retrieve totalInodes from block
+        freeList = SysLib.bytes2int(superBlock, 8);     // retrieve freeList from block
 
-        if(totalBlocks == diskSize && totalInodes > 0 && freeList >= 2) {
+        if(totalBlocks == diskSize || totalInodes > 0 || freeList >= 2) {
             // disk contents are valid
             return;
         }
@@ -22,13 +23,13 @@ public class SuperBlock {
             totalBlocks = diskSize;
             format(defaultInodeBlocks);
         }
-
     }
 
     // format the number of blocks being passes in and replace them with
     // empty or new Inodes, update freeList
     // param-is the number of blocks to format
     public void format(int blocksNumber) {
+        totalInodes = blocksNumber;
         if(blocksNumber < 0) {          // check if valid
             return;
         }
@@ -47,29 +48,26 @@ public class SuperBlock {
             byte[] temp = new byte[Disk.blockSize];         // create temp byte array
             fillBlock(temp);                         // fill array
             SysLib.int2bytes(i + 1, temp, 0);  // turn to byte
-            SysLib.rawwrite(i, temp);               // write to disk
+            SysLib.rawwrite(i, temp);                // write to disk
         }
         sync();                                     // sync disk
     }
-    
+
     // this function just takes in a byte array and fills it with
     // zeroes
     public void fillBlock(byte[] block) {
         for(int i = 0; i < Disk.blockSize; i++)     // loop array
             block[i] = 0;                           // fill with 0
     }
-    
-    //Sync updates the disk with any changes made to superblock
-    public void sync()
-    {
-        byte[] data = new byte[Disk.blockSize]; //512 bytes per block
-        int offset = 0;
-        SysLib.int2bytes(totalBlocks, data, offset); //convert totalBlocks to bytes
-        offset += 4; //4 bytes per int
-        SysLib.int2bytes(totalInodes, data, offset); //convert totalInodes to bytes
-        offset += 4; //4 bytes per int
-        SysLib.int2bytes(freeList, data, offset); //convert freeList to bytes
-        SysLib.rawwrite(0, data); //Update disk
+
+    // updates block 0 (the superblock) with the actual block 0 in the disk
+    // stored at 0, 4, 8 because all values are int type and need 4 bytes
+    public void sync() {
+        byte[] superBlock = new byte[Disk.blockSize];   // byte array to store data
+        SysLib.int2bytes(totalBlocks, superBlock, 0);   // save total Blocks
+        SysLib.int2bytes(totalInodes, superBlock, 4);   // save total Inodes
+        SysLib.int2bytes(freeList, superBlock, 8);      // save free lists
+        SysLib.rawwrite(0, superBlock);         // write to 0th block (super block)
     }
 
     // retrives the index of the next free block and replaces the freeList
@@ -87,20 +85,24 @@ public class SuperBlock {
         }
         return -1;
     }
-    //Enqueue the given block to the freelist
+
+
+    // Enqueue the given block to the freelist
     public boolean returnBlock(int blockNumber) {
-        if(blockNumber < 0 ||  blockNumber > totalBlocks) //Block number outside of boudns
+        if(blockNumber < 0 ||  blockNumber > totalBlocks) // Block number outside of boudns
         {
             return false;
         }
-        byte[] data = new byte[Disk.blockSize];
+        byte[] data = new byte[Disk.blockSize];           // temporary store data
         for(int i = 0; i < data.length; i++) //Clear data
         {
-            data[i] = (byte)0;
+            data[i] = (byte)0;                            // clear each byte
         }
-        SysLib.int2bytes(freeList, data,0);
-        SysLib.rawwrite(blockNumber, data);
+        SysLib.int2bytes(freeList, data,0);           // write to list
+        SysLib.rawwrite(blockNumber, data);               // write to disk
         freeList = blockNumber; //Freelist head is now parameter block number
         return true;
     }
+
 }
+
