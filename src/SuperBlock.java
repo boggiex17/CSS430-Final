@@ -29,8 +29,16 @@ public class SuperBlock {
 
     }
 
-    public void sync() {
-
+    public void sync()
+    {
+        byte[] data = new byte[Disk.blockSize]; //512 bytes per block
+        int offset = 0;
+        SysLib.int2bytes(totalBlocks, data, offset); //convert totalBlocks to bytes
+        offset += 4; //4 bytes per int
+        SysLib.int2bytes(totalInodes, data, offset); //convert totalInodes to bytes
+        offset += 4; //4 bytes per int
+        SysLib.int2bytes(freeList, data, offset); //convert freeList to bytes
+        SysLib.rawwrite(0, data); //Update disk
     }
 
     public int getFreeBlock() {
