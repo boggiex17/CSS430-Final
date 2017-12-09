@@ -157,6 +157,7 @@ public class Inode {
             return true;                            // success
         }
     }
+    //Relases indirect block
     byte[] releaseBlock()
     {
         if (indirect >= 0)  //Indirect block points to something
@@ -167,5 +168,10 @@ public class Inode {
             return blockData;
         }
         return null; //Indirect block did not point to anything
+    }
+    //Return indirect block pointer
+    int findIndirect()
+    {
+        return indirect;
     }
 }
