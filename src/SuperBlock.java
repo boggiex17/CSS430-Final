@@ -87,8 +87,20 @@ public class SuperBlock {
         }
         return -1;
     }
-
+    //Enqueue the given block to the freelist
     public boolean returnBlock(int blockNumber) {
-
+        if(blockNumber < 0 ||  blockNumber > totalBlocks) //Block number outside of boudns
+        {
+            return false;
+        }
+        byte[] data = new byte[Disk.blockSize];
+        for(int i = 0; i < data.length; i++) //Clear data
+        {
+            data[i] = (byte)0;
+        }
+        SysLib.int2bytes(freeList, data,0);
+        SysLib.rawwrite(blockNumber, data);
+        freeList = blockNumber; //Freelist head is now parameter block number
+        return true;
     }
 }
