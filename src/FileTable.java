@@ -10,37 +10,32 @@ public class FileTable {
         dir = directory;           // receive a reference to the Director
     }                              // from the file system
 
-    // major public methods
+   //Allocates an entry into the file table
+    //Parameters used to retreive  Inode number
     public synchronized FileTableEntry falloc( String filename, String mode ) {
-        // allocate a new file (structure) table entry for this file name
-        // allocate/retrieve and register the corresponding inode using dir
-        // increment this inode's count
-        // immediately write back this inode to the disk
-        // return a reference to this file (structure) table entry
-        short iNumber = -1;
-        Inode inode = null;
+        short iNodeNum = dir.namei( filename );  //Acquire inode number
 
-        while(true) {
-            iNumber = (filename.equals("/") ? 0 : dir.namei(filename));
-
-            if (iNumber >= 0) {
-                inode = new Inode(iNumber);
-                if (mode.equals("r")) {
-
-
-                } else if (mode.equals("w")) {
-
-                }
-            }
-            // did not find the file that the system wants to read
-            else {
-                if (mode.equals("r")) {
-                    return null;
-                }
-            }
+        if ( iNodeNum == -1 )                //No number for inode
+        {
+            iNodeNum = dir.ialloc( filename ); //Allocate inode
         }
-        FileTableEntry test = new FileTableEntry();
-        return  test;
+        byte [] iNodeBlock = new byte [Disk.blockSize];
+        //Make sure blockNumber is in range
+        int blockNum;
+        if(iNodeNum % 16 != 0)
+        {
+            blockNum = 1 + iNodeNum/16;
+        }
+        else
+        {
+            blockNum = iNodeNum/16;
+        }
+        SysLib.rawread(blockNum, iNodeBlock ); //Read from disk
+        Inode temp = new Inode( iNodeNum ); //Create inode with proper index
+        FileTableEntry entry = new FileTableEntry( temp, iNodeNum, mode ); //File entry holds inode
+        temp.count++;
+        temp.toDisk( iNodeNum ); //Write to disk
+        return entry;
     }
     // Recieve a file table entry reference as a parameter and
     // free this file table entry. Save corresponding inode to the
