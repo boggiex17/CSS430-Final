@@ -25,9 +25,40 @@ public class SuperBlock {
 
     }
 
+    // format the number of blocks being passes in and replace them with
+    // empty or new Inodes, update freeList
+    // param-is the number of blocks to format
     public void format(int blocksNumber) {
+        if(blocksNumber < 0) {          // check if valid
+            return;
+        }
 
+        for(short i = 0; i < blocksNumber; i++) {
+            Inode temp = new Inode();   // create inode
+            temp.flag = 0;              // set flat to unused
+            temp.toDisk(i);             // write to disk
+        }
+
+        // blockNumber/16 gets block we are in + 1 gets goes to next
+        // block and + 1 for the super block
+        int nextFreeBlock = blocksNumber/16 + 1 + 1;        // get next free block value
+        freeList = nextFreeBlock;       // set next free pointer
+        for(int i = nextFreeBlock; i < totalBlocks; i++) {  // loop blocks
+            byte[] temp = new byte[Disk.blockSize];         // create temp byte array
+            fillBlock(temp);                         // fill array
+            SysLib.int2bytes(i + 1, temp, 0);  // turn to byte
+            SysLib.rawwrite(i, temp);               // write to disk
+        }
+        sync();                                     // sync disk
     }
+    
+    // this function just takes in a byte array and fills it with
+    // zeroes
+    public void fillBlock(byte[] block) {
+        for(int i = 0; i < Disk.blockSize; i++)     // loop array
+            block[i] = 0;                           // fill with 0
+    }
+    
     //Sync updates the disk with any changes made to superblock
     public void sync()
     {
@@ -41,13 +72,20 @@ public class SuperBlock {
         SysLib.rawwrite(0, data); //Update disk
     }
 
+    // retrives the index of the next free block and replaces the freeList
+    // with the index of the next available free block
     public int getFreeBlock() {
         // list not empty but is in range
         if (freeList > 0 && freeList < totalBlocks) {
-            byte[] block = new byte[Disk.blockSize];
-            SysLib.rawread(freeList, blockInfo);
-
+            byte[] block = new byte[Disk.blockSize];    // store free block
+            int freeBlock = freeList;
+            SysLib.rawread(freeBlock, block);           // read free block
+            freeList = SysLib.bytes2int(block, 0);   // update free list
+            SysLib.int2bytes(0, block, 0);       // back to bytes
+            SysLib.rawwrite(freeBlock, block);          // write back to disk
+            return freeBlock;                           // return index
         }
+        return -1;
     }
 
     public boolean returnBlock(int blockNumber) {
