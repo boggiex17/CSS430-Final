@@ -35,6 +35,7 @@ public class FileTable {
         FileTableEntry entry = new FileTableEntry( temp, iNodeNum, mode ); //File entry holds inode
         temp.count++;
         temp.toDisk( iNodeNum ); //Write to disk
+        table.add(entry);
         return entry;
     }
     // Recieve a file table entry reference as a parameter and
