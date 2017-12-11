@@ -27,23 +27,26 @@ public class FileSystem {
     }
 
     // sync
-    void sunc() {
-        FileTableEntry var1 = open("/", "w");
-        byte[] var2 = directory.directory2bytes();
-        write(var1, var2);
-        close(var1);
-        superblock.sync();
+    // keeps the disk updated with the most current data
+    void sync() {
+        byte[] data = directory.directory2bytes();          // gets data
+        FileTableEntry ftEnt = open("/", "w"); // opens entry
+
+        write(ftEnt, data);                                 // write data
+        close(ftEnt);                                       // closes entry
+        superblock.sync();                                  // synch superblock info
     }
 
 
     // format
+    // takes in the number of files to delete/format
+    // returns true or false based on result of completeion
     boolean format(int files){
 
         if(files < 0)
             return false;
 
         superblock.format(files);
-
         //dir = new Directory(sb.totalInodes);
         //ftb = new FileTable(dir);
         return true;
@@ -129,60 +132,52 @@ public class FileSystem {
         return bufRead;                             // return number of bytes read
     }
 
+    // read
+    // takes in a file entry and a buffer to write the information to block
+    // the file entry is used to locate and access the location on the disk of where
+    // this buffer will be writen to
+    // returns -1 if invalid or the amount of data in bytes writen
     int write(FileTableEntry ftEnt, byte[] buffer) {
+        // the mode is not writable so data cannot be writen
         if (ftEnt.mode == "r") {
             return -1;
         }
-        else {
 
-            int numberOfBytes = buffer.length;
-            int var4 = 0;
-            while(numberOfBytes > 0) {
-                int var6 = ftEnt.inode.findBlock(ftEnt.seekPtr);
-                if (var6 == -1) {
-                    short var7 = (short)this.superblock.getFreeBlock();
-                    switch(ftEnt.inode.recordBlock(ftEnt.seekPtr, var7)) {
-                        case -3:
-                            short var8 = (short)this.superblock.getFreeBlock();
-                            if (!ftEnt.inode.setBlock(var8)) {
-                                SysLib.cerr("ThreadOS: panic on write\n");
-                                return -1;
-                            }
-                            if (ftEnt.inode.recordBlock(ftEnt.seekPtr, var7) != 0) {
-                                SysLib.cerr("ThreadOS: panic on write\n");
-                                return -1;
-                            }
-                        case 0:
-                        default:
-                            var6 = var7;
-                            break;
-                        case -2:
-                        case -1:
-                            SysLib.cerr("ThreadOS: filesystem panic on write\n");
-                            return -1;
-                    }
-                }
+        int buffLen = buffer.length;// store buffer length
+        if(buffLen == 0)            // nothing in buffer to write
+            return -1;
 
-                byte[] var13 = new byte[512];
-                if (SysLib.rawread(var6, var13) == -1) {
-                    System.exit(2);
+        int bytesWriten = 0;        // keep track of all bytes that are writen
+        while(buffLen > 0) {        // while buffer has info to write
+            int current = ftEnt.inode.findBlock(ftEnt.seekPtr);     // find free block
+            if (current == -1) {           // no file
+                int freeBlock = superblock.getFreeBlock();          // retrive free block
+                int block = ftEnt.inode.recordBlock(ftEnt.seekPtr, (short) freeBlock);  // update block
+                if (block == 0)
+                    continue;
+                if (block == -1)                            // invalid
+                    return -1;
+                if (block == -3) {
+                    int anotherBlock = superblock.getFreeBlock();               // get free block
+                    if (ftEnt.inode.setBlock((short) anotherBlock) == false)    // cant set blokc
+                        return -1;
                 }
-                int var14 = ftEnt.seekPtr % 512;
-                int var9 = 512 - var14;
-                int var10 = Math.min(var9, numberOfBytes);
-                System.arraycopy(buffer, var4, var13, var14, var10);
-                SysLib.rawwrite(var6, var13);
-                ftEnt.seekPtr += var10;
-                var4 += var10;
-                numberOfBytes -= var10;
-                if (ftEnt.seekPtr > ftEnt.inode.length) {
-                    ftEnt.inode.length = ftEnt.seekPtr;
-                }
-                ftEnt.inode.toDisk(ftEnt.iNumber);
-                return var4;
+                current = block;                            // set current
             }
+
+            byte[] tempData = new byte[Disk.blockSize];     // to store data
+            SysLib.rawread(current, tempData);              // read data
+            int offset = ftEnt.seekPtr & Disk.blockSize;    // get the offset
+            int less = Math.min(offset, buffLen);   // find the smaller of two values
+            System.arraycopy(buffer, bytesWriten, tempData, offset, less);       // copy just the right data amount
+            SysLib.rawwrite(current, tempData);     // write data
+            bytesWriten += less;            // update bytes writen
+            buffLen -= less;                // update bytes left to read
+            ftEnt.seekPtr += less;          // update the seek pointer of entry
+
         }
-        return -1;
+        return bytesWriten;           // return numbe of bytes writen
+
     }
 
     // deallocAllBlock
