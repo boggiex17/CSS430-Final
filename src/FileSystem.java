@@ -75,70 +75,58 @@ public class FileSystem {
         return ftEnt.inode.length;
     }
 
+    // read
+    // takes in a file entry and a buffer to store the information read
+    // the file entry is used to locate and access the location on the disk of where
+    // this buffer will retrieve information from
+    // returns -1 if invalid or the amount of data read in bytes
     public int read(FileTableEntry ftEnt, byte[] buffer)
     {
+        // the mode is not readable so data cannot be read
+        if (ftEnt.mode == "w" || ftEnt.mode == "a")
+            return  -1;
 
-        int sizeLeftToRead = 0;
-        int trackDataRead = 0;
-        int size = buffer.length;
-        // Could not read if the File Table Entry has mode write or append
-        if (ftEnt.mode.equals("w") || ftEnt.mode.equals("a")) return -1;
-        // Check for invalid passed in parameter
-        if (buffer == null)
-        {
+        int buffLen = buffer.length;        // bytes to read
+
+        if (buffLen == 0)                   // 0 bytes to read
             return -1;
-        }
 
-        synchronized (ftEnt)
+        int bufLeft = 0;
+        int readLeft = 0;
+        int bufRead = 0;
+        int leftToRead = 0;
+        int offset = 0;
+        int blocksLeft = 0;
+
+        // while still need to read and seek pointer is not at the end and buffer has room to read into
+        while(buffLen != 0 && ftEnt.seekPtr < fsize(ftEnt) && buffLen > 0)
         {
-            // Only stop when the seek pointer is still within the range
-            // And the buffer still have place to read data into
-            while (ftEnt.seekPtr < fsize(ftEnt) && buffer.length > 0)
+
+            int current = ftEnt.inode.findBlock(ftEnt.seekPtr); // find where to read
+            if (current == -1)                                  // if nothing to read
+                break;
+            else
             {
+                byte[] readData = new byte[Disk.blockSize];     // to read data from block
+                SysLib.rawread(current, readData);              // read from disk
 
-                // FIND BLOCK NUMBER
-                int blockNum = ftEnt.inode.findBlock(ftEnt.seekPtr);
-                //
-                if (blockNum != -1)
-                {
+                offset = ftEnt.seekPtr % Disk.blockSize;        // get dsik offset
+                readLeft = fsize(ftEnt) - ftEnt.seekPtr;        // how many bytes left
+                blocksLeft = Disk.blockSize - offset;
 
-                    byte[] tempRead = new byte[Disk.blockSize];
-                    // Know the block location to read from, now load the data from disk
-                    SysLib.rawread(blockNum, buffer);
+                int smaller = Math.min(readLeft, blocksLeft);   // get the smaller value
+                leftToRead = Math.min(smaller, bufLeft);        // get samller value
 
-                    // How far we go in to
-
-
-                    int dataGetInto = ftEnt.seekPtr % Disk.blockSize;
-                    int remainingBlocks = Disk.blockSize - dataGetInto;
-                    int remaining = fsize(ftEnt) - ftEnt.seekPtr;
-
-
-                    int smallerBetweenBlockandData = Math.min(remainingBlocks, size);
-                    // Check to see how much left we can read versus the size remaining
-                    sizeLeftToRead = Math.min(smallerBetweenBlockandData, remaining);
-
-
-                    System.arraycopy(tempRead, dataGetInto, buffer, trackDataRead, sizeLeftToRead);
-                    // Update the varaible to read into the byte array
-                    trackDataRead += sizeLeftToRead;
-                    // Update the Seek Pointer to read at new position
-                    ftEnt.seekPtr += sizeLeftToRead;
-                    // Update the size total.
-                    size -= sizeLeftToRead;
-                } else
-                {
-                    // Invalid block location
-                    break;
-                }
-
+                // copy/read data from the disk into the buffer from limited bytes to
+                // limited bytes a limited amount of bytes
+                System.arraycopy(readData, offset, buffer, bufRead, leftToRead);
             }
-            return trackDataRead;
-
+            bufLeft = bufRead - leftToRead;         // update bytes left
+            bufRead = bufRead + leftToRead;         // update number of bytes read
+            ftEnt.seekPtr += leftToRead;            // updtate seek pointer
         }
-        // Default return value, if reached here, then no success
 
-
+        return bufRead;                             // return number of bytes read
     }
 
     int write(FileTableEntry ftEnt, byte[] buffer) {
@@ -263,5 +251,9 @@ public class FileSystem {
         return -1;                              // error
     }
 }
+
+
+
+
 
 
